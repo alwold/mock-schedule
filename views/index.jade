@@ -1,0 +1,15 @@
+h1= title
+h3 Add a class
+form(action='/course', method='post')
+  label Course Number
+    input(name='course[courseNumber]')  
+  label Name
+    input(name='course[name]')
+  label Schedule
+    input(name='course[schedule]')
+  label Open Status
+    select(name='course[status]')
+      option Open
+      option Closed
+  p
+    input(type='submit', value='Add')
