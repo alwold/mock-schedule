@@ -22,7 +22,7 @@ exports.createCourse = function(req, res) {
   } else {
     error = "Course number, name, schedule or status missing";
   }
-  res.render('createCourse', { title: 'Create Course', course: course, error: error });
+  res.render('index', { title: 'Mock Schedule', courses: global.courses, message: error ? error : "Course Added" });
 };
 
 exports.deleteCourse = function(req, res) {
@@ -36,7 +36,7 @@ exports.deleteCourse = function(req, res) {
       }
     }
   }
-  res.render('index', { title: 'Courses', courses: global.courses, message: deleted ? 'Deleted' : 'Couldn\'t find course to delete' });
+  res.render('index', { title: 'Mock Schedule', courses: global.courses, message: deleted ? 'Deleted' : 'Couldn\'t find course to delete' });
 };
 
 function Course(courseNumber, name, schedule, status) {
