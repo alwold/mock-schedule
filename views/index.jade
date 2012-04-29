@@ -1,4 +1,22 @@
 h1= title
+h3 Existing classes
+- if (!global.courses)
+  em There are no classes yet.
+- else
+  table
+    thead
+      tr
+        th Name
+        th Course Number
+        th Schedule
+        th Status
+    tbody
+      - for (var i = 0; i < global.courses.length; i++)
+        tr
+          td= global.courses[i].name
+          td= global.courses[i].courseNumber
+          td= global.courses[i].schedule
+          td= global.courses[i].status
 h3 Add a class
 form(action='/course', method='post')
   label Course Number
