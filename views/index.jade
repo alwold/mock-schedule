@@ -18,7 +18,8 @@ h3 Existing classes
           td= global.courses[i].name
           td= global.courses[i].courseNumber
           td= global.courses[i].schedule
-          td= global.courses[i].status
+          td
+            a(href='/course/'+global.courses[i].courseNumber+'/toggle')= global.courses[i].status
           td
             a(href='/course/'+global.courses[i].courseNumber+'/delete') Delete
 h3 Add a class

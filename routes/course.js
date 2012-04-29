@@ -39,6 +39,21 @@ exports.deleteCourse = function(req, res) {
   res.render('index', { title: 'Mock Schedule', courses: global.courses, message: deleted ? 'Deleted' : 'Couldn\'t find course to delete' });
 };
 
+exports.toggleCourseStatus = function(req, res) {
+  if (global.courses) {
+    for (var i = 0; i < global.courses.length; i++) {
+      if (global.courses[i].courseNumber == req.params.courseNumber) {
+        if (global.courses[i].status == 'Open') {
+          global.courses[i].status = 'Closed';
+        } else {
+          global.courses[i].status = 'Open';
+        }
+      }
+    }
+  }
+  res.render('index', { title: 'Mock Schedule', courses: global.courses });
+};
+
 function Course(courseNumber, name, schedule, status) {
   this.courseNumber = courseNumber;
   this.name = name;
