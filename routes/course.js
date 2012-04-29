@@ -4,8 +4,25 @@ exports.createCourse = function(req, res) {
   if (!global.courses) {
     global.courses = [];
   }
-  global.courses.push(course);
-  res.render('createCourse', { title: 'Create Course', course: course });
+  var error = null;
+  if (course.courseNumber && course.name && course.schedule && course.status) {
+    var alreadyExists = false;
+    // make sure it's not already there
+    for (var i = 0; i < global.courses.length; i++) {
+      if (global.courses[i].courseNumber == course.courseNumber) {
+        alreadyExists = true;
+        break;
+      }
+    }
+    if (!alreadyExists) {
+      global.courses.push(course);
+    } else {
+      error = "Course already exists";
+    }
+  } else {
+    error = "Course number, name, schedule or status missing";
+  }
+  res.render('createCourse', { title: 'Create Course', course: course, error: error });
 };
 
 function Course(courseNumber, name, schedule, status) {
