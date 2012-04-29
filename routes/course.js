@@ -25,6 +25,20 @@ exports.createCourse = function(req, res) {
   res.render('createCourse', { title: 'Create Course', course: course, error: error });
 };
 
+exports.deleteCourse = function(req, res) {
+  var deleted = false;
+  if (global.courses) {
+    for (var i = 0; i < global.courses.length; i++) {
+      if (global.courses[i].courseNumber == req.params.courseNumber) {
+        global.courses.splice(i, 1);
+        deleted = true;
+        i--; // redo this i, because it will have shifted
+      }
+    }
+  }
+  res.render('index', { title: 'Courses', courses: global.courses, message: deleted ? 'Deleted' : 'Couldn\'t find course to delete' });
+};
+
 function Course(courseNumber, name, schedule, status) {
   this.courseNumber = courseNumber;
   this.name = name;

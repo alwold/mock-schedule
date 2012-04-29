@@ -15,3 +15,7 @@ label {
 label input {
   display: block;
 }
+
+p.message {
+  color: red;
+}

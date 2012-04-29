@@ -36,6 +36,7 @@ app.configure('production', function(){
 
 app.get('/', routes.index);
 app.post('/course', course.createCourse);
+app.get('/course/:courseNumber/delete', course.deleteCourse);
 
 app.listen(3001, function(){
   console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
