@@ -5,13 +5,12 @@
 
 var express = require('express'),
   routes = require('./routes'),
-  course = require('./routes/course');
-
-for (var a in routes) {
- console.log(a);
-}
+  course = require('./routes/course'),
+  cache = require('./cache');
 
 var app = module.exports = express.createServer();
+
+//cache.memcached.connect();
 
 // Configuration
 
@@ -34,10 +33,11 @@ app.configure('production', function(){
 
 // Routes
 
-app.get('/', routes.index);
+app.get('/', course.index);
 app.post('/course', course.createCourse);
 app.get('/course/:courseNumber/delete', course.deleteCourse);
 app.get('/course/:courseNumber/toggle', course.toggleCourseStatus);
+app.get('/course/:courseNumber', course.getCourseInfo);
 
 app.listen(3001, function(){
   console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);

@@ -2,7 +2,7 @@ h1= title
 - if (typeof message == 'string')
   p(class='message')= message
 h3 Existing classes
-- if (!global.courses)
+- if (!courses)
   em There are no classes yet.
 - else
   table
@@ -13,15 +13,15 @@ h3 Existing classes
         th Schedule
         th Status
     tbody
-      - for (var i = 0; i < global.courses.length; i++)
+      - for (var i = 0; i < courses.length; i++)
         tr
-          td= global.courses[i].name
-          td= global.courses[i].courseNumber
-          td= global.courses[i].schedule
+          td= courses[i].name
+          td= courses[i].courseNumber
+          td= courses[i].schedule
           td
-            a(href='/course/'+global.courses[i].courseNumber+'/toggle')= global.courses[i].status
+            a(href='/course/'+courses[i].courseNumber+'/toggle')= courses[i].status
           td
-            a(href='/course/'+global.courses[i].courseNumber+'/delete') Delete
+            a(href='/course/'+courses[i].courseNumber+'/delete') Delete
 h3 Add a class
 form(action='/course', method='post')
   label Course Number

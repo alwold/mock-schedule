@@ -1,28 +1,37 @@
+var cache = require('../cache');
+
 exports.createCourse = function(req, res) {
   courseMap = req.body.course;
   course = new Course(courseMap.courseNumber, courseMap.name, courseMap.schedule, courseMap.status);
-  if (!global.courses) {
-    global.courses = [];
-  }
-  var error = null;
   if (course.courseNumber && course.name && course.schedule && course.status) {
-    var alreadyExists = false;
-    // make sure it's not already there
-    for (var i = 0; i < global.courses.length; i++) {
-      if (global.courses[i].courseNumber == course.courseNumber) {
-        alreadyExists = true;
-        break;
+    cache.memcached.get("courseList", function(err, result) {
+      if (err) {
+        renderIndex(req, res, err);
+      } else {
+        if (result && result.indexOf(course.courseNumber) != -1) {
+          renderIndex(req, res, "Course already exists");
+        } else {
+          if (result) {
+            result.push(course.courseNumber);
+          } else {
+            result = [course.courseNumber];
+          }
+          cache.memcached.set("courseList", result, 10000, function(err, result) {
+            // add the course
+            cache.memcached.set(course.courseNumber, course, 10000, function(err, result){
+              if (err) {
+                renderIndex(req, res, err);
+              } else {
+                renderIndex(req, res, "Course Added");
+              }
+            });
+          });
+        }
       }
-    }
-    if (!alreadyExists) {
-      global.courses.push(course);
-    } else {
-      error = "Course already exists";
-    }
+    });
   } else {
-    error = "Course number, name, schedule or status missing";
+    renderIndex(req, res, "Course number, name, schedule or status missing");
   }
-  res.render('index', { title: 'Mock Schedule', courses: global.courses, message: error ? error : "Course Added" });
 };
 
 exports.deleteCourse = function(req, res) {
@@ -53,6 +62,46 @@ exports.toggleCourseStatus = function(req, res) {
   }
   res.render('index', { title: 'Mock Schedule', courses: global.courses });
 };
+
+exports.getCourseInfo = function(req, res) {
+  if (global.courses) {
+    for (var i = 0; i < global.courses.length; i++) {
+      if (global.courses[i].courseNumber == req.params.courseNumber) {
+        res.setHeader("Content-type", "text/json");
+        res.end(JSON.stringify(global.courses[i]));
+      }
+    }
+  }
+};
+
+exports.index = function(req, res) {
+  renderIndex(req, res, null);
+}
+
+function renderIndex(req, res, message) {
+  // get list of courses
+  cache.memcached.get("courseList", function(err, courseList) {
+    console.log("coursEList is "+JSON.stringify(courseList));
+    var courses = [];
+    var i = 0;
+    var getNextCourse = function getNextCourse() {
+      console.log("getting course #"+i);
+      cache.memcached.get(courseList[i], function(err, course) {
+        console.log("result is "+course);
+        console.log("result.courseNumber is "+course.courseNumber);
+        courses.push(course);
+        i++;
+        if (i < courseList.length) {
+          getNextCourse();
+        } else {
+          console.log("rendering with "+courses.length+" courses");
+          res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
+        }
+      });
+    };
+    getNextCourse();
+  });
+}
 
 function Course(courseNumber, name, schedule, status) {
   this.courseNumber = courseNumber;
