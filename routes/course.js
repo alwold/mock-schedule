@@ -8,17 +8,17 @@ exports.createCourse = function(req, res) {
       if (err) {
         renderIndex(req, res, err);
       } else {
-        if (result && result.indexOf(course.courseNumber) != -1) {
+        if (result && result.indexOf(course.key()) != -1) {
           renderIndex(req, res, "Course already exists");
         } else {
           if (result) {
-            result.push(course.courseNumber);
+            result.push(course.key());
           } else {
-            result = [course.courseNumber];
+            result = [course.key()];
           }
           cache.memcached.set("courseList", result, 10000, function(err, result) {
             // add the course
-            cache.memcached.set(course.courseNumber, course, 10000, function(err, result){
+            cache.memcached.set(course.key(), course, 10000, function(err, result){
               if (err) {
                 renderIndex(req, res, err);
               } else {
@@ -35,12 +35,12 @@ exports.createCourse = function(req, res) {
 };
 
 exports.deleteCourse = function(req, res) {
-  console.log("delete requested for "+req.params.courseNumber);
+  console.log("delete requested for "+req.params.courseKey);
   cache.memcached.get("courseList", function(err, courseList) {
     if (err) {
       renderIndex(req, res, err);
     } else {
-      var index = courseList.indexOf(req.params.courseNumber);
+      var index = courseList.indexOf(req.params.courseKey);
       if (index != -1) {
         console.log("operating on courseList: "+JSON.stringify(courseList));
         courseList.splice(index, 1);
@@ -49,8 +49,8 @@ exports.deleteCourse = function(req, res) {
           if (err) {
             renderIndex(req, res, err);
           } else {
-            console.log("delete key: "+req.params.courseNumber);
-            cache.memcached.del(req.params.courseNumber, function(err, result) {
+            console.log("delete key: "+req.params.courseKey);
+            cache.memcached.del(req.params.courseKey, function(err, result) {
               if (err) {
                 console.log("got error");
                 renderIndex(req, res, err);
@@ -69,20 +69,19 @@ exports.deleteCourse = function(req, res) {
 };
 
 exports.toggleCourseStatus = function(req, res) {
-  cache.memcached.get(req.params.courseNumber, function(error, course) {
+  cache.memcached.get(req.params.courseKey, function(error, course) {
     if (error) {
       renderIndex(req, res, "Error: "+error);
     } else if (!course) {
       renderIndex(req, res, "Couldn't find course");
     } else {
-      if (course.courseNumber == req.params.courseNumber) {
-        if (course.status == 'Open') {
-          course.status = 'Closed';
-        } else {
-          course.status = 'Open';
-        }
+      course.__proto__ = Course.prototype;
+      if (course.status == 'Open') {
+        course.status = 'Closed';
+      } else {
+        course.status = 'Open';
       }
-      cache.memcached.set(course.courseNumber, course, 10000, function(error, result) {
+      cache.memcached.set(course.key(), course, 10000, function(error, result) {
         if (error) {
           renderIndex(req, res, "Error: "+error);
         } else {
@@ -107,7 +106,7 @@ exports.getCourseInfo = function(req, res) {
 
 exports.index = function(req, res) {
   renderIndex(req, res, null);
-}
+};
 
 function renderIndex(req, res, message) {
   // get list of courses
@@ -131,6 +130,7 @@ function renderIndex(req, res, message) {
           } else {
             console.log("result is "+course);
             console.log("result.courseNumber is "+course.courseNumber);
+            course.__proto__ = Course.prototype;
             courses.push(course);
           }
           i++;
@@ -161,4 +161,8 @@ function Course(term, courseNumber, name, schedule, status) {
 
 Course.prototype.toString = function() {
   return "Course: ["+this.term+", "+this.courseNumber+", "+this.name+", "+this.schedule+", "+this.status+"]";
+};
+
+Course.prototype.key = function() {
+  return this.term+':'+this.courseNumber;
 };
