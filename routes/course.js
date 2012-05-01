@@ -35,17 +35,37 @@ exports.createCourse = function(req, res) {
 };
 
 exports.deleteCourse = function(req, res) {
-  var deleted = false;
-  if (global.courses) {
-    for (var i = 0; i < global.courses.length; i++) {
-      if (global.courses[i].courseNumber == req.params.courseNumber) {
-        global.courses.splice(i, 1);
-        deleted = true;
-        i--; // redo this i, because it will have shifted
+  console.log("delete requested for "+req.params.courseNumber);
+  cache.memcached.get("courseList", function(err, courseList) {
+    if (err) {
+      renderIndex(req, res, err);
+    } else {
+      var index = courseList.indexOf(req.params.courseNumber);
+      if (index != -1) {
+        console.log("operating on courseList: "+JSON.stringify(courseList));
+        courseList.splice(index, 1);
+        console.log("after courseList: "+JSON.stringify(courseList));
+        cache.memcached.set("courseList", courseList, 10000, function(err, result) {
+          if (err) {
+            renderIndex(req, res, err);
+          } else {
+            console.log("delete key: "+req.params.courseNumber);
+            cache.memcached.del(req.params.courseNumber, function(err, result) {
+              if (err) {
+                console.log("got error");
+                renderIndex(req, res, err);
+              } else {
+                console.log("delete worked: "+JSON.stringify(result));
+                renderIndex(req, res, "Course deleted");
+              }
+            });
+          }
+        });
+      } else {
+        renderIndex(req, res, "Unable to find course to delete");
       }
     }
-  }
-  res.render('index', { title: 'Mock Schedule', courses: global.courses, message: deleted ? 'Deleted' : 'Couldn\'t find course to delete' });
+  });
 };
 
 exports.toggleCourseStatus = function(req, res) {
@@ -81,25 +101,42 @@ exports.index = function(req, res) {
 function renderIndex(req, res, message) {
   // get list of courses
   cache.memcached.get("courseList", function(err, courseList) {
-    console.log("coursEList is "+JSON.stringify(courseList));
-    var courses = [];
-    var i = 0;
-    var getNextCourse = function getNextCourse() {
-      console.log("getting course #"+i);
-      cache.memcached.get(courseList[i], function(err, course) {
-        console.log("result is "+course);
-        console.log("result.courseNumber is "+course.courseNumber);
-        courses.push(course);
-        i++;
-        if (i < courseList.length) {
-          getNextCourse();
-        } else {
-          console.log("rendering with "+courses.length+" courses");
-          res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
-        }
-      });
-    };
-    getNextCourse();
+    if (err) {
+      res.render('index', { title: 'Mock Schedule', courses: [], message: "Error loading courses: "+err});
+    } else if (!courseList) {
+      res.render('index', { title: 'Mock Schedule', courses: [], message: null});
+    } else {
+      console.log("coursEList is "+JSON.stringify(courseList));
+      var courses = [];
+      var i = 0;
+      var getNextCourse = function getNextCourse() {
+        console.log("getting course #"+i);
+        cache.memcached.get(courseList[i], function(err, course) {
+          console.log("in callback");
+          if (err) {
+            console.log("Error getting "+courseList[i]+": "+err);
+          } else if (!course) {
+            console.log("course "+courseList[i]+" is missing");
+          } else {
+            console.log("result is "+course);
+            console.log("result.courseNumber is "+course.courseNumber);
+            courses.push(course);
+          }
+          i++;
+          if (i < courseList.length) {
+            getNextCourse();
+          } else {
+            console.log("rendering with "+courses.length+" courses");
+            res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
+          }
+        });
+      };
+      if (courseList.length > 0) {
+        getNextCourse();
+      } else {
+        res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
+      }
+    }
   });
 }
 
