@@ -69,18 +69,28 @@ exports.deleteCourse = function(req, res) {
 };
 
 exports.toggleCourseStatus = function(req, res) {
-  if (global.courses) {
-    for (var i = 0; i < global.courses.length; i++) {
-      if (global.courses[i].courseNumber == req.params.courseNumber) {
-        if (global.courses[i].status == 'Open') {
-          global.courses[i].status = 'Closed';
+  cache.memcached.get(req.params.courseNumber, function(error, course) {
+    if (error) {
+      renderIndex(req, res, "Error: "+error);
+    } else if (!course) {
+      renderIndex(req, res, "Couldn't find course");
+    } else {
+      if (course.courseNumber == req.params.courseNumber) {
+        if (course.status == 'Open') {
+          course.status = 'Closed';
         } else {
-          global.courses[i].status = 'Open';
+          course.status = 'Open';
         }
       }
+      cache.memcached.set(course.courseNumber, course, 10000, function(error, result) {
+        if (error) {
+          renderIndex(req, res, "Error: "+error);
+        } else {
+          renderIndex(req, res, null);
+        }
+      });
     }
-  }
-  res.render('index', { title: 'Mock Schedule', courses: global.courses });
+  });
 };
 
 exports.getCourseInfo = function(req, res) {
