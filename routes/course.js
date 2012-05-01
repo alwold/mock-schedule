@@ -94,14 +94,15 @@ exports.toggleCourseStatus = function(req, res) {
 };
 
 exports.getCourseInfo = function(req, res) {
-  if (global.courses) {
-    for (var i = 0; i < global.courses.length; i++) {
-      if (global.courses[i].courseNumber == req.params.courseNumber) {
-        res.setHeader("Content-type", "text/json");
-        res.end(JSON.stringify(global.courses[i]));
-      }
+  cache.memcached.get(req.params.courseNumber, function(error, course) {
+    if (error) {
+      res.statusCode = 500;
+      res.end();
+    } else {
+      res.setHeader("Content-type", "text/json");
+      res.end(JSON.stringify(course));
     }
-  }
+  });
 };
 
 exports.index = function(req, res) {
