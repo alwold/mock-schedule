@@ -2,8 +2,8 @@ var cache = require('../cache');
 
 exports.createCourse = function(req, res) {
   courseMap = req.body.course;
-  course = new Course(courseMap.courseNumber, courseMap.name, courseMap.schedule, courseMap.status);
-  if (course.courseNumber && course.name && course.schedule && course.status) {
+  course = new Course(courseMap.term, courseMap.courseNumber, courseMap.name, courseMap.schedule, courseMap.status);
+  if (course.term && course.courseNumber && course.name && course.schedule && course.status) {
     cache.memcached.get("courseList", function(err, result) {
       if (err) {
         renderIndex(req, res, err);
@@ -30,7 +30,7 @@ exports.createCourse = function(req, res) {
       }
     });
   } else {
-    renderIndex(req, res, "Course number, name, schedule or status missing");
+    renderIndex(req, res, "Term, course number, name, schedule or status missing");
   }
 };
 
@@ -151,7 +151,8 @@ function renderIndex(req, res, message) {
   });
 }
 
-function Course(courseNumber, name, schedule, status) {
+function Course(term, courseNumber, name, schedule, status) {
+  this.term = term;
   this.courseNumber = courseNumber;
   this.name = name;
   this.schedule = schedule;
@@ -159,5 +160,5 @@ function Course(courseNumber, name, schedule, status) {
 }
 
 Course.prototype.toString = function() {
-  return "Course: ["+this.courseNumber+", "+this.name+", "+this.schedule+", "+this.status+"]";
+  return "Course: ["+this.term+", "+this.courseNumber+", "+this.name+", "+this.schedule+", "+this.status+"]";
 };

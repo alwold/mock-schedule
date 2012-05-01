@@ -8,15 +8,17 @@ h3 Existing classes
   table
     thead
       tr
-        th Name
+        th Term
         th Course Number
+        th Name
         th Schedule
         th Status
     tbody
       - for (var i = 0; i < courses.length; i++)
         tr
-          td= courses[i].name
+          td= courses[i].term
           td= courses[i].courseNumber
+          td= courses[i].name
           td= courses[i].schedule
           td
             a(href='/course/'+courses[i].courseNumber+'/toggle')= courses[i].status
@@ -24,6 +26,8 @@ h3 Existing classes
             a(href='/course/'+courses[i].courseNumber+'/delete') Delete
 h3 Add a class
 form(action='/course', method='post')
+  label Term
+    input(name='course[term]')
   label Course Number
     input(name='course[courseNumber]')  
   label Name
