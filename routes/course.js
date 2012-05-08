@@ -93,7 +93,7 @@ exports.toggleCourseStatus = function(req, res) {
 };
 
 exports.getCourseInfo = function(req, res) {
-  cache.memcached.get(req.params.courseNumber, function(error, course) {
+  cache.memcached.get(req.params.courseKey, function(error, course) {
     if (error) {
       res.statusCode = 500;
       res.end();
