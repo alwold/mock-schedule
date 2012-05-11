@@ -80,26 +80,32 @@ exports.deleteCourse = function(req, res) {
 };
 
 exports.toggleCourseStatus = function(req, res) {
-  cache.memcached.get(req.params.courseKey, function(error, course) {
-    if (error) {
-      renderIndex(req, res, "Error: "+error);
-    } else if (!course) {
-      renderIndex(req, res, "Couldn't find course");
-    } else {
-      course.__proto__ = Course.prototype;
-      if (course.status == 'Open') {
-        course.status = 'Closed';
+  collectionAction(function(coursesCollection) {
+    console.log("toggling "+req.params.courseKey);
+    coursesCollection.findOne({_id: new ObjectID(req.params.courseKey)}, function(error, course) {
+      if (error) {
+        db.close();
+        renderIndex(req, res, error);
+      } else if (course) {
+         if (course.status == "Open") {
+           course.status = "Closed";
+         } else {
+           course.status = "Open";
+         }
+         console.log("status is now "+course.status);
+         coursesCollection.save(course, {safe: true}, function(error, course) {
+           db.close();
+           if (error) {
+             renderIndex(req, res, error);
+           } else {
+             renderIndex(req, res, null);
+           }
+         });
       } else {
-        course.status = 'Open';
+        db.close();
+        renderIndex(req, res, "Couldn't find course to toggle");
       }
-      cache.memcached.set(course.key(), course, 10000, function(error, result) {
-        if (error) {
-          renderIndex(req, res, "Error: "+error);
-        } else {
-          renderIndex(req, res, null);
-        }
-      });
-    }
+    });
   });
 };
 
@@ -141,6 +147,24 @@ function renderIndex(req, res, message) {
               db.close();
             }
           });
+        }
+      });
+    }
+  });
+}
+
+function collectionAction(action) {
+  db.open(function(error, client) {
+    if (error) {
+      db.close();
+      renderIndex(req, res, error);
+    } else {
+      client.collection("courses", function(error, coursesCollection) {
+        if (error) {
+          db.close();
+          renderIndex(req, res, error);
+        } else {
+          action(coursesCollection);
         }
       });
     }

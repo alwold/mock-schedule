@@ -21,7 +21,7 @@ h3 Existing classes
           td= courses[i].name
           td= courses[i].schedule
           td
-            a(href='/course/'+courses[i].key()+'/toggle')= courses[i].status
+            a(href='/course/'+courses[i]._id+'/toggle')= courses[i].status
           td
             a(href='/course/'+courses[i]._id+'/delete') Delete
           td
