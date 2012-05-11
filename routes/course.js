@@ -1,32 +1,46 @@
 var cache = require('../cache');
+var Db = require('mongodb').Db;
+var Server = require('mongodb').Server;
+var db = new Db('mock-schedule', new Server("127.0.0.1", 27017, {}));
 
 exports.createCourse = function(req, res) {
   courseMap = req.body.course;
   course = new Course(courseMap.term, courseMap.courseNumber, courseMap.name, courseMap.schedule, courseMap.status);
   if (course.term && course.courseNumber && course.name && course.schedule && course.status) {
-    cache.memcached.get("courseList", function(err, result) {
-      if (err) {
-        renderIndex(req, res, err);
+    db.open(function(error, client) {
+      if (error) {
+        renderIndex(req, res, error);
       } else {
-        if (result && result.indexOf(course.key()) != -1) {
-          renderIndex(req, res, "Course already exists");
-        } else {
-          if (result) {
-            result.push(course.key());
+        client.collection("courses", function(error, coursesCollection) {
+          if (error) {
+            renderIndex(req, res, error);
           } else {
-            result = [course.key()];
-          }
-          cache.memcached.set("courseList", result, 10000, function(err, result) {
-            // add the course
-            cache.memcached.set(course.key(), course, 10000, function(err, result){
-              if (err) {
-                renderIndex(req, res, err);
+            var exists = false;
+            var cursor = coursesCollection.find().each(function(error, existingCourse) {
+              if (error) {
+                renderIndex(req, res, error);
+              } else if (existingCourse) {
+                console.log("existingCourse: "+existingCourse);
+                existingCourse.__proto__ = Course.prototype;
+                console.log("existing course: "+existingCourse.key());
+                if (course.key() == existingCourse.key() && !exists) {
+                  console.log("found existing course");
+                  renderIndex(req, res, "Course already exists");
+                  exists = true;
+                }
               } else {
-                renderIndex(req, res, "Course Added");
+                console.log("null existingCourse");
+                // so do they send a blank one at the end so you can do the next action?
+                if (!exists) {
+                  console.log("no existing course, adding");
+                  coursesCollection.insert(course, function(error, docs) {
+                    renderIndex(req, res, "Course Added");
+                  });
+                }
               }
             });
-          });
-        }
+          }
+        });
       }
     });
   } else {
@@ -93,7 +107,7 @@ exports.toggleCourseStatus = function(req, res) {
 };
 
 exports.getCourseInfo = function(req, res) {
-  cache.memcached.get(req.params.courseNumber, function(error, course) {
+  cache.memcached.get(req.params.courseKey, function(error, course) {
     if (error) {
       res.statusCode = 500;
       res.end();
@@ -110,43 +124,27 @@ exports.index = function(req, res) {
 
 function renderIndex(req, res, message) {
   // get list of courses
-  cache.memcached.get("courseList", function(err, courseList) {
-    if (err) {
-      res.render('index', { title: 'Mock Schedule', courses: [], message: "Error loading courses: "+err});
-    } else if (!courseList) {
-      res.render('index', { title: 'Mock Schedule', courses: [], message: null});
+  db.open(function(error, client) {
+    if (error) {
+      res.render('index', { title: 'Mock Schedule', courses: [], message: error});
     } else {
-      console.log("coursEList is "+JSON.stringify(courseList));
-      var courses = [];
-      var i = 0;
-      var getNextCourse = function getNextCourse() {
-        console.log("getting course #"+i);
-        cache.memcached.get(courseList[i], function(err, course) {
-          console.log("in callback");
-          if (err) {
-            console.log("Error getting "+courseList[i]+": "+err);
-          } else if (!course) {
-            console.log("course "+courseList[i]+" is missing");
-          } else {
-            console.log("result is "+course);
-            console.log("result.courseNumber is "+course.courseNumber);
-            course.__proto__ = Course.prototype;
-            courses.push(course);
-          }
-          i++;
-          if (i < courseList.length) {
-            getNextCourse();
-          } else {
-            console.log("rendering with "+courses.length+" courses");
-            res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
-          }
-        });
-      };
-      if (courseList.length > 0) {
-        getNextCourse();
-      } else {
-        res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
-      }
+      client.collection("courses", function(error, coursesCollection) {
+        if (error) {
+          res.render('index', { title: 'Mock Schedule', courses: [], message: error});
+        } else {
+          var courses = [];
+          coursesCollection.find().each(function(error, course) {
+            if (error) {
+              res.render('index', { title: 'Mock Schedule', courses: [], message: error});
+            } else if (course) {
+              course.__proto__ = Course.prototype;
+              courses.push(course);
+            } else {
+              res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
+            }
+          });
+        }
+      });
     }
   });
 }
