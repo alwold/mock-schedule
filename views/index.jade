@@ -23,7 +23,7 @@ h3 Existing classes
           td
             a(href='/course/'+courses[i].key()+'/toggle')= courses[i].status
           td
-            a(href='/course/'+courses[i].key()+'/delete') Delete
+            a(href='/course/'+courses[i]._id+'/delete') Delete
 h3 Add a class
 form(action='/course', method='post')
   label Term

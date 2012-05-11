@@ -1,6 +1,7 @@
 var cache = require('../cache');
 var Db = require('mongodb').Db;
 var Server = require('mongodb').Server;
+var ObjectID = require('mongodb').ObjectID;
 var db = new Db('mock-schedule', new Server("127.0.0.1", 27017, {}));
 
 exports.createCourse = function(req, res) {
@@ -9,15 +10,18 @@ exports.createCourse = function(req, res) {
   if (course.term && course.courseNumber && course.name && course.schedule && course.status) {
     db.open(function(error, client) {
       if (error) {
+        db.close();
         renderIndex(req, res, error);
       } else {
         client.collection("courses", function(error, coursesCollection) {
           if (error) {
+            db.close();
             renderIndex(req, res, error);
           } else {
             var exists = false;
             var cursor = coursesCollection.find().each(function(error, existingCourse) {
               if (error) {
+                db.close();
                 renderIndex(req, res, error);
               } else if (existingCourse) {
                 console.log("existingCourse: "+existingCourse);
@@ -25,6 +29,7 @@ exports.createCourse = function(req, res) {
                 console.log("existing course: "+existingCourse.key());
                 if (course.key() == existingCourse.key() && !exists) {
                   console.log("found existing course");
+                  db.close();
                   renderIndex(req, res, "Course already exists");
                   exists = true;
                 }
@@ -34,6 +39,7 @@ exports.createCourse = function(req, res) {
                 if (!exists) {
                   console.log("no existing course, adding");
                   coursesCollection.insert(course, function(error, docs) {
+                    db.close();
                     renderIndex(req, res, "Course Added");
                   });
                 }
@@ -50,34 +56,25 @@ exports.createCourse = function(req, res) {
 
 exports.deleteCourse = function(req, res) {
   console.log("delete requested for "+req.params.courseKey);
-  cache.memcached.get("courseList", function(err, courseList) {
-    if (err) {
-      renderIndex(req, res, err);
+  db.open(function(error, client) {
+    if (error) {
+      renderIndex(req, res, error);
     } else {
-      var index = courseList.indexOf(req.params.courseKey);
-      if (index != -1) {
-        console.log("operating on courseList: "+JSON.stringify(courseList));
-        courseList.splice(index, 1);
-        console.log("after courseList: "+JSON.stringify(courseList));
-        cache.memcached.set("courseList", courseList, 10000, function(err, result) {
-          if (err) {
-            renderIndex(req, res, err);
-          } else {
-            console.log("delete key: "+req.params.courseKey);
-            cache.memcached.del(req.params.courseKey, function(err, result) {
-              if (err) {
-                console.log("got error");
-                renderIndex(req, res, err);
-              } else {
-                console.log("delete worked: "+JSON.stringify(result));
-                renderIndex(req, res, "Course deleted");
-              }
-            });
-          }
-        });
-      } else {
-        renderIndex(req, res, "Unable to find course to delete");
-      }
+      client.collection("courses", function(error, coursesCollection) {
+        if (error) {
+          renderIndex(req, res, error);
+        } else {
+          coursesCollection.remove({_id: ObjectID(req.params.courseKey)}, function(error, object) {
+            console.log("callback: object = "+object);
+            db.close();
+            if (error) {
+              renderIndex(req, res, error);
+            } else {
+              renderIndex(req, res, "Deleted");
+            }
+          });
+        }
+      });
     }
   });
 };
@@ -141,6 +138,7 @@ function renderIndex(req, res, message) {
               courses.push(course);
             } else {
               res.render('index', { title: 'Mock Schedule', courses: courses, message: message });
+              db.close();
             }
           });
         }
