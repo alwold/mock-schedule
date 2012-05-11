@@ -24,6 +24,8 @@ h3 Existing classes
             a(href='/course/'+courses[i].key()+'/toggle')= courses[i].status
           td
             a(href='/course/'+courses[i]._id+'/delete') Delete
+          td
+            a(href='/course/'+courses[i].key()) JSON
 h3 Add a class
 form(action='/course', method='post')
   label Term
