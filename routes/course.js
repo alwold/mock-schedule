@@ -110,14 +110,18 @@ exports.toggleCourseStatus = function(req, res) {
 };
 
 exports.getCourseInfo = function(req, res) {
-  cache.memcached.get(req.params.courseKey, function(error, course) {
-    if (error) {
-      res.statusCode = 500;
-      res.end();
-    } else {
-      res.setHeader("Content-type", "text/json");
-      res.end(JSON.stringify(course));
-    }
+  collectionAction(function(coursesCollection) {
+    var termAndCourseNumber = req.params.courseKey.split(":");
+    coursesCollection.findOne({term: termAndCourseNumber[0], courseNumber: termAndCourseNumber[1]}, function(error, course) {
+      db.close();
+      if (error) {
+        res.statusCode = 500;
+        res.end();
+      } else {
+        res.setHeader("Content-type", "text/plain");
+        res.end(JSON.stringify(course));
+      }
+    });
   });
 };
 
