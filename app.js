@@ -5,12 +5,9 @@
 
 var express = require('express'),
   routes = require('./routes'),
-  course = require('./routes/course'),
-  cache = require('./cache');
+  course = require('./routes/course');
 
 var app = module.exports = express.createServer();
-
-//cache.memcached.connect();
 
 // Configuration
 
