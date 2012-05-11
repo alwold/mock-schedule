@@ -117,9 +117,12 @@ exports.getCourseInfo = function(req, res) {
       if (error) {
         res.statusCode = 500;
         res.end();
-      } else {
+      } else if (course) {
         res.setHeader("Content-type", "text/plain");
         res.end(JSON.stringify(course));
+      } else {
+        res.statusCode = 404;
+        res.end();
       }
     });
   });
